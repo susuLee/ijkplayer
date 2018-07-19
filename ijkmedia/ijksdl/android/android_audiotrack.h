@@ -2,6 +2,7 @@
  * android_audiotrack.h
  *****************************************************************************
  *
+ * Copyright (c) 2013 Bilibili
  * copyright (c) 2013 Zhang Rui <bbcallen@gmail.com>
  *
  * This file is part of ijkPlayer.
@@ -28,6 +29,8 @@
 #include <jni.h>
 #include "../ijksdl_audio.h"
 #include "../ijksdl_aout.h"
+
+#define AUDIOTRACK_PLAYBACK_MAXSPEED (2)
 
 typedef struct SDL_Android_AudioTrack_Spec {
     enum StreamType {
@@ -87,8 +90,6 @@ typedef struct SDL_Android_AudioTrack_Spec {
 
 typedef struct SDL_Android_AudioTrack SDL_Android_AudioTrack;
 
-int SDL_Android_AudioTrack_global_init(JNIEnv *env);
-
 SDL_Android_AudioTrack *SDL_Android_AudioTrack_new_from_spec(JNIEnv *env, SDL_Android_AudioTrack_Spec *spec);
 SDL_Android_AudioTrack *SDL_Android_AudioTrack_new_from_sdl_spec(JNIEnv *env, const SDL_AudioSpec *sdl_spec);
 void SDL_Android_AudioTrack_free(JNIEnv *env, SDL_Android_AudioTrack* atrack);
@@ -105,6 +106,7 @@ void SDL_Android_AudioTrack_stop(JNIEnv *env, SDL_Android_AudioTrack *atrack);
 void SDL_Android_AudioTrack_release(JNIEnv *env, SDL_Android_AudioTrack *atrack);
 int SDL_Android_AudioTrack_write(JNIEnv *env, SDL_Android_AudioTrack *atrack, uint8_t *data, int size_in_byte);
 
-int SDL_Android_AudioTrack_getAudioSessionId(JNIEnv *env, SDL_Android_AudioTrack *atrack);
+int  SDL_Android_AudioTrack_getAudioSessionId(JNIEnv *env, SDL_Android_AudioTrack *atrack);
+void SDL_Android_AudioTrack_setSpeed(JNIEnv *env, SDL_Android_AudioTrack *atrack, float speed);
 
 #endif

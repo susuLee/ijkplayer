@@ -1,6 +1,7 @@
 /*
  * IJKFFMoviePlayerController.h
  *
+ * Copyright (c) 2013 Bilibili
  * Copyright (c) 2013 Zhang Rui <bbcallen@gmail.com>
  *
  * This file is part of ijkPlayer.
@@ -21,7 +22,9 @@
  */
 
 #import "IJKMediaPlayback.h"
+#import "IJKFFMonitor.h"
 #import "IJKFFOptions.h"
+#import "IJKSDLGLViewProtocol.h"
 
 // media meta
 #define k_IJKM_KEY_FORMAT         @"format"
@@ -72,33 +75,39 @@ typedef enum IJKLogLevel {
 - (id)initWithContentURL:(NSURL *)aUrl
              withOptions:(IJKFFOptions *)options;
 
-- (id)initWithContentURL:(NSURL *)aUrl
-             withOptions:(IJKFFOptions *)options
-     withSegmentResolver:(id<IJKMediaSegmentResolver>)segmentResolver;
-
 - (id)initWithContentURLString:(NSString *)aUrlString
-                   withOptions:(IJKFFOptions *)options
-           withSegmentResolver:(id<IJKMediaSegmentResolver>)segmentResolver;
+                   withOptions:(IJKFFOptions *)options;
+
+- (id)initWithMoreContent:(NSURL *)aUrl
+             withOptions:(IJKFFOptions *)options
+              withGLView:(UIView<IJKSDLGLViewProtocol> *)glView;
+
+- (id)initWithMoreContentString:(NSString *)aUrlString
+                 withOptions:(IJKFFOptions *)options
+                  withGLView:(UIView<IJKSDLGLViewProtocol> *)glView;
 
 - (void)prepareToPlay;
 - (void)play;
 - (void)pause;
 - (void)stop;
 - (BOOL)isPlaying;
+- (int64_t)trafficStatistic;
+- (float)dropFrameRate;
 
 - (void)setPauseInBackground:(BOOL)pause;
 - (BOOL)isVideoToolboxOpen;
+
+- (void)setHudValue:(NSString *)value forKey:(NSString *)key;
 
 + (void)setLogReport:(BOOL)preferLogReport;
 + (void)setLogLevel:(IJKLogLevel)logLevel;
 + (BOOL)checkIfFFmpegVersionMatch:(BOOL)showAlert;
 + (BOOL)checkIfPlayerVersionMatch:(BOOL)showAlert
-                            major:(unsigned int)major
-                            minor:(unsigned int)minor
-                            micro:(unsigned int)micro;
+                            version:(NSString *)version;
 
 @property(nonatomic, readonly) CGFloat fpsInMeta;
 @property(nonatomic, readonly) CGFloat fpsAtOutput;
+@property(nonatomic) BOOL shouldShowHudView;
 
 - (void)setOptionValue:(NSString *)value
                 forKey:(NSString *)key
@@ -120,10 +129,17 @@ typedef enum IJKLogLevel {
 - (void)setSwsOptionIntValue:       (int64_t)value forKey:(NSString *)key;
 - (void)setPlayerOptionIntValue:    (int64_t)value forKey:(NSString *)key;
 
-@property (nonatomic, weak) id<IJKMediaTcpOpenDelegate>     tcpOpenDelegate;
-@property (nonatomic, weak) id<IJKMediaHttpOpenDelegate>    httpOpenDelegate;
-@property (nonatomic, weak) id<IJKMediaHttpRetryDelegate>   httpRetryDelegate;
-@property (nonatomic, weak) id<IJKMediaLiveRetryDelegate>   liveRetryDelegate;
+@property (nonatomic, retain) id<IJKMediaUrlOpenDelegate> segmentOpenDelegate;
+@property (nonatomic, retain) id<IJKMediaUrlOpenDelegate> tcpOpenDelegate;
+@property (nonatomic, retain) id<IJKMediaUrlOpenDelegate> httpOpenDelegate;
+@property (nonatomic, retain) id<IJKMediaUrlOpenDelegate> liveOpenDelegate;
+
+@property (nonatomic, retain) id<IJKMediaNativeInvokeDelegate> nativeInvokeDelegate;
+
+- (void)didShutdown;
+
+#pragma mark KVO properties
+@property (nonatomic, readonly) IJKFFMonitor *monitor;
 
 @end
 

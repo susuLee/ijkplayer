@@ -1,6 +1,7 @@
 /*
  * IJKMediaUtils.h
  *
+ * Copyright (c) 2013 Bilibili
  * Copyright (c) 2013 Zhang Rui <bbcallen@gmail.com>
  *
  * This file is part of ijkPlayer.
@@ -23,11 +24,6 @@
 #import <Foundation/Foundation.h>
 
 @interface IJKMediaUtils : NSObject
-
-+ (int)createTempFDForFFConcat;
-+ (int)createTempFDWithPrefix: (NSString*)aPrefix;
-+ (int)createTempFDInDirectory: (NSString*)aDirectory
-                    withPrefix: (NSString*)aPrefix;
 
 + (NSError*)createErrorWithDomain: (NSString*)domain
                              code: (NSInteger)code

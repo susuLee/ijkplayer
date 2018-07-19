@@ -1,6 +1,7 @@
 /*
  * IJKMediaUtils.m
  *
+ * Copyright (c) 2013 Bilibili
  * Copyright (c) 2013 Zhang Rui <bbcallen@gmail.com>
  *
  * This file is part of ijkPlayer.
@@ -23,32 +24,6 @@
 #import "IJKMediaUtils.h"
 
 @implementation IJKMediaUtils
-
-+ (int)createTempFDForFFConcat
-{
-    return [IJKMediaUtils createTempFDWithPrefix:@"ffconcat-"];
-}
-
-+ (int)createTempFDWithPrefix: (NSString*)aPrefix
-{
-    return [IJKMediaUtils createTempFDInDirectory: NSTemporaryDirectory()
-                                       withPrefix: aPrefix];
-}
-
-+ (int)createTempFDInDirectory: (NSString*)aDirectory
-                    withPrefix: (NSString*)aPrefix
-{
-    NSString* templateStr = [NSString stringWithFormat:@"%@/%@XXXXXX", aDirectory, aPrefix];
-    char template[templateStr.length + 32];
-    strcpy(template, [templateStr cStringUsingEncoding:NSASCIIStringEncoding]);
-    int fd = mkstemp(template);
-    if (fd <= 0) {
-        NSLog(@"Could not create fd in directory %@", aDirectory);
-        return -1;
-    }
-    unlink(template);
-    return fd;
-}
 
 + (NSError*)createErrorWithDomain: (NSString*)domain
                              code: (NSInteger)code

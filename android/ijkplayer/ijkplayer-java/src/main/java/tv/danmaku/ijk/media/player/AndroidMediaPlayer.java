@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2006 Bilibili
  * Copyright (C) 2006 The Android Open Source Project
  * Copyright (C) 2013 Zhang Rui <bbcallen@gmail.com>
  *
@@ -20,7 +21,9 @@ package tv.danmaku.ijk.media.player;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.media.AudioManager;
+import android.media.MediaDataSource;
 import android.media.MediaPlayer;
+import android.media.TimedText;
 import android.net.Uri;
 import android.os.Build;
 import android.text.TextUtils;
@@ -33,18 +36,18 @@ import java.lang.ref.WeakReference;
 import java.util.Map;
 
 import tv.danmaku.ijk.media.player.misc.AndroidTrackInfo;
+import tv.danmaku.ijk.media.player.misc.IMediaDataSource;
 import tv.danmaku.ijk.media.player.misc.ITrackInfo;
 import tv.danmaku.ijk.media.player.pragma.DebugLog;
 
 public class AndroidMediaPlayer extends AbstractMediaPlayer {
-    private MediaPlayer mInternalMediaPlayer;
-    private AndroidMediaPlayerListenerHolder mInternalListenerAdapter;
+    private final MediaPlayer mInternalMediaPlayer;
+    private final AndroidMediaPlayerListenerHolder mInternalListenerAdapter;
     private String mDataSource;
+    private MediaDataSource mMediaDataSource;
 
-    private Object mInitLock = new Object();
+    private final Object mInitLock = new Object();
     private boolean mIsReleased;
-
-    private boolean mKeepInBackground;
 
     private static MediaInfo sMediaInfo;
 
@@ -109,9 +112,53 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.M)
+    @Override
+    public void setDataSource(IMediaDataSource mediaDataSource) {
+        releaseMediaDataSource();
+
+        mMediaDataSource = new MediaDataSourceProxy(mediaDataSource);
+        mInternalMediaPlayer.setDataSource(mMediaDataSource);
+    }
+
+    @TargetApi(Build.VERSION_CODES.M)
+    private static class MediaDataSourceProxy extends MediaDataSource {
+        private final IMediaDataSource mMediaDataSource;
+
+        public MediaDataSourceProxy(IMediaDataSource mediaDataSource) {
+            mMediaDataSource = mediaDataSource;
+        }
+
+        @Override
+        public int readAt(long position, byte[] buffer, int offset, int size) throws IOException {
+            return mMediaDataSource.readAt(position, buffer, offset, size);
+        }
+
+        @Override
+        public long getSize() throws IOException {
+            return mMediaDataSource.getSize();
+        }
+
+        @Override
+        public void close() throws IOException {
+            mMediaDataSource.close();
+        }
+    }
+
     @Override
     public String getDataSource() {
         return mDataSource;
+    }
+
+    private void releaseMediaDataSource() {
+        if (mMediaDataSource != null) {
+            try {
+                mMediaDataSource.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            mMediaDataSource = null;
+        }
     }
 
     @Override
@@ -203,7 +250,7 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
     public void release() {
         mIsReleased = true;
         mInternalMediaPlayer.release();
-
+        releaseMediaDataSource();
         resetListeners();
         attachInternalListeners();
     }
@@ -215,7 +262,7 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
         } catch (IllegalStateException e) {
             DebugLog.printStackTrace(e);
         }
-
+        releaseMediaDataSource();
         resetListeners();
         attachInternalListeners();
     }
@@ -281,7 +328,6 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
 
     @Override
     public void setKeepInBackground(boolean keepInBackground) {
-        mKeepInBackground = keepInBackground;
     }
 
     /*--------------------
@@ -298,6 +344,7 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
                 .setOnVideoSizeChangedListener(mInternalListenerAdapter);
         mInternalMediaPlayer.setOnErrorListener(mInternalListenerAdapter);
         mInternalMediaPlayer.setOnInfoListener(mInternalListenerAdapter);
+        mInternalMediaPlayer.setOnTimedTextListener(mInternalListenerAdapter);
     }
 
     private class AndroidMediaPlayerListenerHolder implements
@@ -305,8 +352,9 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
             MediaPlayer.OnBufferingUpdateListener,
             MediaPlayer.OnSeekCompleteListener,
             MediaPlayer.OnVideoSizeChangedListener,
-            MediaPlayer.OnErrorListener, MediaPlayer.OnInfoListener {
-        public WeakReference<AndroidMediaPlayer> mWeakMediaPlayer;
+            MediaPlayer.OnErrorListener, MediaPlayer.OnInfoListener,
+            MediaPlayer.OnTimedTextListener {
+        public final WeakReference<AndroidMediaPlayer> mWeakMediaPlayer;
 
         public AndroidMediaPlayerListenerHolder(AndroidMediaPlayer mp) {
             mWeakMediaPlayer = new WeakReference<AndroidMediaPlayer>(mp);
@@ -315,19 +363,15 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
         @Override
         public boolean onInfo(MediaPlayer mp, int what, int extra) {
             AndroidMediaPlayer self = mWeakMediaPlayer.get();
-            if (self == null)
-                return false;
+            return self != null && notifyOnInfo(what, extra);
 
-            return notifyOnInfo(what, extra);
         }
 
         @Override
         public boolean onError(MediaPlayer mp, int what, int extra) {
             AndroidMediaPlayer self = mWeakMediaPlayer.get();
-            if (self == null)
-                return false;
+            return self != null && notifyOnError(what, extra);
 
-            return notifyOnError(what, extra);
         }
 
         @Override
@@ -373,6 +417,21 @@ public class AndroidMediaPlayer extends AbstractMediaPlayer {
                 return;
 
             notifyOnPrepared();
+        }
+
+        @Override
+        public void onTimedText(MediaPlayer mp, TimedText text) {
+            AndroidMediaPlayer self = mWeakMediaPlayer.get();
+            if (self == null)
+                return;
+
+            IjkTimedText ijkText = null;
+
+            if (text != null) {
+                ijkText = new IjkTimedText(text.getBounds(), text.getText());
+            }
+
+            notifyOnTimedText(ijkText);
         }
     }
 }
